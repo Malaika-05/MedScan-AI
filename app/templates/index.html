@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedScan AI — Medical Report Explainer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    .header { background: #1e293b; padding: 1.2rem 2rem; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 12px; }
+    .header h1 { font-size: 1.4rem; color: #38bdf8; }
+    .header span { font-size: 0.85rem; color: #64748b; }
+    .disclaimer { background: #422006; border: 1px solid #92400e; color: #fcd34d; padding: 10px 2rem; font-size: 0.8rem; text-align: center; }
+    .container { max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+    .tab { padding: 10px 24px; border-radius: 8px; cursor: pointer; border: 1px solid #334155; background: transparent; color: #94a3b8; font-size: 0.9rem; transition: all .2s; }
+    .tab.active { background: #0ea5e9; color: white; border-color: #0ea5e9; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.2rem; }
+    .card h3 { color: #38bdf8; margin-bottom: 1rem; font-size: 1rem; }
+    .upload-area { border: 2px dashed #334155; border-radius: 10px; padding: 2rem; text-align: center; cursor: pointer; transition: border-color .2s; }
+    .upload-area:hover { border-color: #0ea5e9; }
+    .upload-area input { display: none; }
+    .upload-area p { color: #64748b; font-size: 0.9rem; margin-top: 8px; }
+    textarea { width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px; color: #e2e8f0; font-size: 0.9rem; resize: vertical; min-height: 120px; }
+    textarea:focus { outline: none; border-color: #0ea5e9; }
+    .lang-select { display: flex; gap: 10px; margin: 10px 0; }
+    .lang-btn { padding: 6px 16px; border-radius: 20px; border: 1px solid #334155; background: transparent; color: #94a3b8; cursor: pointer; font-size: 0.82rem; }
+    .lang-btn.active { background: #0ea5e9; color: white; border-color: #0ea5e9; }
+    .btn { width: 100%; padding: 12px; background: #0ea5e9; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 12px; transition: background .2s; }
+    .btn:hover { background: #0284c7; }
+    .btn:disabled { background: #334155; cursor: not-allowed; }
+    .result-box { background: #0f172a; border: 1px solid #1e3a5f; border-radius: 10px; padding: 1.2rem; margin-top: 1rem; white-space: pre-wrap; font-size: 0.88rem; line-height: 1.7; color: #cbd5e1; display: none; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; margin: 3px; }
+    .badge-blue { background: #1e3a5f; color: #38bdf8; }
+    .badge-green { background: #14532d; color: #4ade80; }
+    .loader { text-align: center; color: #64748b; padding: 1rem; display: none; }
+    .region-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .error-box { background: #450a0a; border: 1px solid #991b1b; color: #fca5a5; border-radius: 8px; padding: 10px 14px; margin-top: 10px; display: none; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🩺 MedScan AI</h1>
+    <span>Medical Report Explainer + Symptom Checker</span>
+  </div>
+</div>
+
+<div class="disclaimer">
+  ⚠️ This AI tool is for informational purposes only. Always consult a qualified doctor for medical advice.
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('report')">📄 Report Upload</button>
+    <button class="tab" onclick="switchTab('symptoms')">💬 Symptom Checker</button>
+  </div>
+
+  <!-- Report Upload Panel -->
+  <div class="panel active" id="panel-report">
+    <div class="card">
+      <h3>Upload Medical Report</h3>
+      <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" onchange="handleFile(this)">
+        <div style="font-size:2rem">📁</div>
+        <p>Click to upload or drag and drop<br>JPG, PNG, or PDF supported</p>
+        <p id="fileName" style="color:#38bdf8;margin-top:8px"></p>
+      </div>
+      <div class="lang-select">
+        <span style="font-size:0.82rem;color:#64748b;align-self:center">Language:</span>
+        <button class="lang-btn active" onclick="setLang(this,'english','report')">English</button>
+        <button class="lang-btn" onclick="setLang(this,'urdu','report')">Urdu</button>
+      </div>
+      <button class="btn" id="reportBtn" onclick="analyzeReport()" disabled>Analyze Report</button>
+      <div class="loader" id="reportLoader">🔄 Analyzing report... (YOLO → OCR → LLM)</div>
+      <div class="error-box" id="reportError"></div>
+    </div>
+
+    <div class="card" id="reportResult" style="display:none">
+      <h3>Analysis Result</h3>
+      <div id="detectionTags" class="region-tags"></div>
+      <div class="result-box" id="reportText" style="display:block"></div>
+    </div>
+  </div>
+
+  <!-- Symptom Checker Panel -->
+  <div class="panel" id="panel-symptoms">
+    <div class="card">
+      <h3>Describe Your Symptoms</h3>
+      <textarea id="symptomInput" placeholder="e.g. I have had high fever for 3 days, severe headache, body aches, and loss of appetite..."></textarea>
+      <div class="lang-select">
+        <span style="font-size:0.82rem;color:#64748b;align-self:center">Language:</span>
+        <button class="lang-btn active" onclick="setLang(this,'english','symptom')">English</button>
+        <button class="lang-btn" onclick="setLang(this,'urdu','symptom')">Urdu</button>
+      </div>
+      <button class="btn" onclick="checkSymptoms()">Check Symptoms</button>
+      <div class="loader" id="symptomLoader">🔄 Analyzing symptoms... (BERT → RAG → LLM)</div>
+      <div class="error-box" id="symptomError"></div>
+    </div>
+
+    <div class="card" id="symptomResult" style="display:none">
+      <h3>Symptom Analysis</h3>
+      <div id="bertResult" style="margin-bottom:10px"></div>
+      <div class="result-box" id="symptomText" style="display:block"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let reportLang = 'english', symptomLang = 'english';
+  let selectedFile = null;
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['report','symptoms'][i] === tab));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+  }
+
+  function setLang(btn, lang, type) {
+    btn.parentElement.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    if (type === 'report') reportLang = lang;
+    else symptomLang = lang;
+  }
+
+  function handleFile(input) {
+    selectedFile = input.files[0];
+    document.getElementById('fileName').textContent = selectedFile ? '✓ ' + selectedFile.name : '';
+    document.getElementById('reportBtn').disabled = !selectedFile;
+  }
+
+  async function analyzeReport() {
+    if (!selectedFile) return;
+    const btn = document.getElementById('reportBtn');
+    const loader = document.getElementById('reportLoader');
+    const errorBox = document.getElementById('reportError');
+
+    btn.disabled = true;
+    loader.style.display = 'block';
+    errorBox.style.display = 'none';
+    document.getElementById('reportResult').style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('language', reportLang);
+
+    try {
+      const res = await fetch('/api/upload-report', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.error) throw new Error(data.error);
+
+      // Show detected regions as badges
+      const tags = document.getElementById('detectionTags');
+      tags.innerHTML = data.detections.map(d =>
+        `<span class="badge badge-blue">${d.class} ${(d.confidence*100).toFixed(0)}%</span>`
+      ).join('') || '<span class="badge badge-green">Full image analyzed</span>';
+
+      document.getElementById('reportText').textContent = data.explanation;
+      document.getElementById('reportResult').style.display = 'block';
+    } catch (err) {
+      errorBox.textContent = '❌ ' + err.message;
+      errorBox.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      loader.style.display = 'none';
+    }
+  }
+
+  async function checkSymptoms() {
+    const symptoms = document.getElementById('symptomInput').value.trim();
+    const loader = document.getElementById('symptomLoader');
+    const errorBox = document.getElementById('symptomError');
+
+    if (symptoms.length < 10) {
+      alert('Please describe your symptoms in more detail.');
+      return;
+    }
+
+    loader.style.display = 'block';
+    errorBox.style.display = 'none';
+    document.getElementById('symptomResult').style.display = 'none';
+
+    try {
+      const res = await fetch('/api/check-symptoms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symptoms, language: symptomLang })
+      });
+      const data = await res.json();
+
+      if (data.error) throw new Error(data.error);
+
+      // Show BERT prediction badges
+      const bertDiv = document.getElementById('bertResult');
+      bertDiv.innerHTML = '<strong style="color:#38bdf8">AI Prediction: </strong>' +
+        data.prediction.top_3.map((p, i) =>
+          `<span class="badge ${i===0?'badge-green':'badge-blue'}">${p.label} ${(p.score*100).toFixed(1)}%</span>`
+        ).join('');
+
+      document.getElementById('symptomText').textContent = data.explanation;
+      document.getElementById('symptomResult').style.display = 'block';
+    } catch (err) {
+      errorBox.textContent = '❌ ' + err.message;
+      errorBox.style.display = 'block';
+    } finally {
+      loader.style.display = 'none';
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# Secrets — never pushed
+.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Large model weights — hosted on HuggingFace instead of git
+model/bert/model.safetensors
+model/bert/model.bin
+model/yolo/best.pt
+
+# Training data / labeled datasets — large, regenerable from Roboflow
+data/labeled/
+
+# Runtime-generated outputs — not source code
+data/predictions/
+data/raw_reports/
+data/uploads/
+
+# Test scripts (optional — remove this block if you want them tracked)
+test.py
+test01.py
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
