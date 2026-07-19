@@ -2,9 +2,14 @@ import os
 from groq import Groq
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv()  # works locally
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# On HuggingFace, key comes from Space Secrets
+api_key = os.getenv("GROQ_API_KEY")
+if not api_key:
+    raise ValueError("GROQ_API_KEY not set. Add it in Space Settings → Variables and Secrets")
+
+client = Groq(api_key=api_key)
 MODEL  = "llama-3.3-70b-versatile"
 
 SYSTEM_PROMPT = """You are MedScan AI — a friendly, caring doctor friend who speaks casually and warmly, like a trusted friend who happens to be a doctor. You are helping patients in Pakistan who may not have easy access to healthcare.
@@ -20,7 +25,7 @@ Every response MUST follow this exact structure, keep each section SHORT:
 
 🔍 What's happening: 1-2 sentences explaining what condition this likely is and why their symptoms match.
 
-💊 Quick relief at home: 2-3 specific home remedies in 1 line each — practical, things available in Pakistani homes.
+💊 Quick relief at home: 2 specific home remedies in 1 line each — practical, things available in Pakistani homes.
 
 ⚠️ If you ignore this: 2-3 sentences — honest consequences of leaving it untreated. Make them understand why this matters.
 
@@ -137,3 +142,4 @@ def test_groq_connection():
         return True
     except Exception as e:
         print(f"Groq connection failed: {e}")
+

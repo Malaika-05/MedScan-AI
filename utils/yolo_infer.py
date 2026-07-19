@@ -1,22 +1,27 @@
 from ultralytics import YOLO
 from PIL import Image
+from huggingface_hub import hf_hub_download
 import json
 import os
 
-MODEL_PATH = os.path.join("model", "yolo", "best.pt")
+_model = None  # cached after first load
+
+def get_model():
+    global _model
+    if _model is None:
+        weights_path = hf_hub_download(
+            repo_id="openmodels05/medscan-yolo",
+            filename="best.pt"
+        )
+        _model = YOLO(weights_path)
+    return _model
 
 def detect_regions(image_path: str, conf_threshold: float = 0.4) -> list:
     """
     Run YOLOv8 on a medical report image.
     Returns list of detected regions with class name, confidence, and bounding box.
     """
-    if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(
-            f"YOLO model not found at {MODEL_PATH}. "
-            "Train on Colab first and download best.pt"
-        )
-
-    model = YOLO(MODEL_PATH)
+    model = get_model()
     results = model.predict(source=image_path, conf=conf_threshold, verbose=False)
 
     detections = []

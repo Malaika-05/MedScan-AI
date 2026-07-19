@@ -1,10 +1,8 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from huggingface_hub import snapshot_download
 import torch
 import pickle
 import os
-
-MODEL_PATH = os.path.join("model", "bert")
-LABEL_ENCODER_PATH = os.path.join("model", "bert", "label_encoder.pkl")
 
 _model = None
 _tokenizer = None
@@ -12,24 +10,22 @@ _label_encoder = None
 
 
 def _load_model():
-    """Load model once and cache it in memory."""
+    """Download (once, cached) and load model into memory."""
     global _model, _tokenizer, _label_encoder
 
     if _model is not None:
         return
 
-    if not os.path.exists(MODEL_PATH):
-        raise FileNotFoundError(
-            f"BERT model not found at {MODEL_PATH}. "
-            "Fine-tune on Colab first and download the model folder."
-        )
+    print("Downloading BioBERT from HuggingFace Hub...")
+    model_path = snapshot_download(repo_id="openmodels05/BioBert")
 
     print("Loading BioBERT model...")
-    _tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-    _model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+    _tokenizer = AutoTokenizer.from_pretrained(model_path)
+    _model = AutoModelForSequenceClassification.from_pretrained(model_path)
     _model.eval()
 
-    with open(LABEL_ENCODER_PATH, "rb") as f:
+    label_encoder_path = os.path.join(model_path, "label_encoder.pkl")
+    with open(label_encoder_path, "rb") as f:
         _label_encoder = pickle.load(f)
 
     print("BioBERT loaded successfully")
