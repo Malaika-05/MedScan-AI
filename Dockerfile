@@ -26,4 +26,4 @@ RUN mkdir -p data/uploads data/knowledge_base models/rag
 EXPOSE 7860
 
 # Start Flask with gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--timeout", "120", "--workers", "1", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--timeout", "300", "--workers", "1", "app:app"]
